@@ -26,6 +26,7 @@ for (let i = 0; i < verticalN; i++) {
 const initialInterpolationFactor = 0.95;
 const baseInterpolationFactor = 0.75;
 let isInitialAnimationDone = false;
+const initialAnimationThreshold = 0.2;
 
 function interpolate(previousValue, nextValue, interpolationFactor) {
   return interpolationFactor * previousValue + (1 - interpolationFactor) * nextValue;
@@ -38,16 +39,20 @@ function normalizeAngle(angle) {
   return mutableAngle;
 }
 
-function interpolateAngle(previousAngle, nextAngle, interpolationFactor) {
-  const normalizedPreviousAngle = normalizeAngle(previousAngle);
-  const normalizedNextAngle = normalizeAngle(nextAngle);
-  let angleDiff = normalizedNextAngle - normalizedPreviousAngle;
+function shortestAngleDiff(a, b) {
+  let angleDiff = b - a;
   if (angleDiff > Math.PI) {
     angleDiff -= 2 * Math.PI;
   } else if (angleDiff < -Math.PI) {
     angleDiff += 2 * Math.PI;
   }
+  return angleDiff;
+}
 
+function interpolateAngle(previousAngle, nextAngle, interpolationFactor) {
+  const normalizedPreviousAngle = normalizeAngle(previousAngle);
+  const normalizedNextAngle = normalizeAngle(nextAngle);
+  const angleDiff = shortestAngleDiff(normalizedPreviousAngle, normalizedNextAngle);
   const interpolatedAngle = normalizedPreviousAngle + angleDiff * (1 - interpolationFactor);
   return normalizeAngle(interpolatedAngle);
 }
@@ -94,7 +99,14 @@ function draw(currentTime) {
         `${i},${j}`,
       );
 
-      if (!isInitialAnimationDone && Math.abs(nextSecondAngle - previousSecondAngle) < 0.008) {
+      if (
+        i === 0 &&
+        j === 0 &&
+        !isInitialAnimationDone &&
+        Math.abs(shortestAngleDiff(nextSecondAngle, previousSecondAngle)) < initialAnimationThreshold &&
+        Math.abs(shortestAngleDiff(nextMinuteAngle, previousMinuteAngle)) < initialAnimationThreshold &&
+        Math.abs(shortestAngleDiff(nextHourAngle, previousHourAngle)) < initialAnimationThreshold
+      ) {
         isInitialAnimationDone = true;
       }
 
@@ -102,27 +114,29 @@ function draw(currentTime) {
       const minuteAngle = interpolateAngle(previousMinuteAngle, nextMinuteAngle, interpolationFactor);
       const secondAngle = interpolateAngle(previousSecondAngle, nextSecondAngle, interpolationFactor);
       const colorFactor = interpolate(previousColorFactor, nextColorFactor, interpolationFactor);
+      const baseThickness = (radius * (colorFactor + 1)) / 2;
+      const baseLength = (radius * (colorFactor + 7)) / 8;
 
       previousState.set(`${i},${j}`, [hourAngle, minuteAngle, secondAngle, colorFactor]);
 
-      const colorHex = Math.floor(10 * (1 - colorFactor)).toString(16);
+      const colorHex = Math.floor(8 * (1 - colorFactor)).toString(16);
       ctx.beginPath();
       ctx.strokeStyle = `#${colorHex}${colorHex}${colorHex}`;
-      ctx.lineWidth = radius * 0.06;
+      ctx.lineWidth = baseThickness * 0.08;
       ctx.moveTo(x, y);
-      ctx.lineTo(x + Math.cos(hourAngle) * radius * 0.7, y + Math.sin(hourAngle) * radius * 0.7);
+      ctx.lineTo(x + Math.cos(hourAngle) * baseLength * 0.7, y + Math.sin(hourAngle) * baseLength * 0.7);
       ctx.stroke();
 
       ctx.beginPath();
-      ctx.lineWidth = radius * 0.05;
+      ctx.lineWidth = baseThickness * 0.065;
       ctx.moveTo(x, y);
-      ctx.lineTo(x + Math.cos(minuteAngle) * radius * 0.9, y + Math.sin(minuteAngle) * radius * 0.9);
+      ctx.lineTo(x + Math.cos(minuteAngle) * baseLength * 0.9, y + Math.sin(minuteAngle) * baseLength * 0.9);
       ctx.stroke();
 
       ctx.beginPath();
-      ctx.lineWidth = radius * 0.04;
+      ctx.lineWidth = baseThickness * 0.04;
       ctx.moveTo(x, y);
-      ctx.lineTo(x + Math.cos(secondAngle) * radius * 0.95, y + Math.sin(secondAngle) * radius * 0.95);
+      ctx.lineTo(x + Math.cos(secondAngle) * baseLength * 0.95, y + Math.sin(secondAngle) * baseLength * 0.95);
       ctx.stroke();
     }
   }
