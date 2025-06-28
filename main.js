@@ -19,13 +19,38 @@ let lastFrameTime = 0;
 const previousState = new Map();
 for (let i = 0; i < verticalN; i++) {
   for (let j = 0; j < horixontalN; j++) {
-    previousState.set(`${i},${j}`, [-Math.PI / 2, -Math.PI / 2, -Math.PI / 2, 0]);
+    previousState.set(`${i},${j}`, [(3 * Math.PI) / 2, (3 * Math.PI) / 2, (3 * Math.PI) / 2, 0]);
   }
 }
 
 const initialInterpolationFactor = 0.95;
 const baseInterpolationFactor = 0.75;
 let isInitialAnimationDone = false;
+
+function interpolate(previousValue, nextValue, interpolationFactor) {
+  return interpolationFactor * previousValue + (1 - interpolationFactor) * nextValue;
+}
+
+function normalizeAngle(angle) {
+  let mutableAngle = angle;
+  while (mutableAngle < 0) mutableAngle += 2 * Math.PI;
+  while (mutableAngle >= 2 * Math.PI) mutableAngle -= 2 * Math.PI;
+  return mutableAngle;
+}
+
+function interpolateAngle(previousAngle, nextAngle, interpolationFactor) {
+  const normalizedPreviousAngle = normalizeAngle(previousAngle);
+  const normalizedNextAngle = normalizeAngle(nextAngle);
+  let angleDiff = normalizedNextAngle - normalizedPreviousAngle;
+  if (angleDiff > Math.PI) {
+    angleDiff -= 2 * Math.PI;
+  } else if (angleDiff < -Math.PI) {
+    angleDiff += 2 * Math.PI;
+  }
+
+  const interpolatedAngle = normalizedPreviousAngle + angleDiff * (1 - interpolationFactor);
+  return normalizeAngle(interpolatedAngle);
+}
 
 function draw(currentTime) {
   if (currentTime - lastFrameTime < frameInterval) {
@@ -73,10 +98,10 @@ function draw(currentTime) {
         isInitialAnimationDone = true;
       }
 
-      const hourAngle = previousHourAngle * interpolationFactor + nextHourAngle * (1 - interpolationFactor);
-      const minuteAngle = previousMinuteAngle * interpolationFactor + nextMinuteAngle * (1 - interpolationFactor);
-      const secondAngle = previousSecondAngle * interpolationFactor + nextSecondAngle * (1 - interpolationFactor);
-      const colorFactor = previousColorFactor * interpolationFactor + nextColorFactor * (1 - interpolationFactor);
+      const hourAngle = interpolateAngle(previousHourAngle, nextHourAngle, interpolationFactor);
+      const minuteAngle = interpolateAngle(previousMinuteAngle, nextMinuteAngle, interpolationFactor);
+      const secondAngle = interpolateAngle(previousSecondAngle, nextSecondAngle, interpolationFactor);
+      const colorFactor = interpolate(previousColorFactor, nextColorFactor, interpolationFactor);
 
       previousState.set(`${i},${j}`, [hourAngle, minuteAngle, secondAngle, colorFactor]);
 
