@@ -80,7 +80,7 @@ function draw(currentTime) {
 
       previousState.set(`${i},${j}`, [hourAngle, minuteAngle, secondAngle, colorFactor]);
 
-      const colorHex = Math.floor(8 * (1 - colorFactor));
+      const colorHex = Math.floor(10 * (1 - colorFactor)).toString(16);
       ctx.beginPath();
       ctx.strokeStyle = `#${colorHex}${colorHex}${colorHex}`;
       ctx.lineWidth = radius * 0.06;
@@ -132,25 +132,23 @@ function getDigitAt(digit, x, y) {
   const key = `${x - 1},${y - 1}`;
   if (digits[digit]?.[key]) {
     const directions = digits[digit][key];
-    return [directionToAngle(directions[0]), directionToAngle(directions[1]), directionToAngle(directions[0])];
+    return [directionToAngle(directions[0]), directionToAngle(directions[1]), directionToAngle(directions[0]), 1];
   }
   return null;
 }
 
 function getClockAngles(y, x, now) {
-  const [tensHoursDigit, onesHoursDigit, tensMinutesDigit, onesMinutesDigit, tensSecondsDigit, onesSecondsDigit] = now
-    .toISOString()
-    .split("T")[1]
-    .replace(/:/g, "")
-    .split("");
+  const [tensHoursDigit, onesHoursDigit] = String(now.getHours()).padStart(2, "0").split("");
   const tensHours = getDigitAt(tensHoursDigit, x, y);
   if (tensHours) return tensHours;
   const onesHours = getDigitAt(onesHoursDigit, x - 4, y);
   if (onesHours) return onesHours;
+  const [tensMinutesDigit, onesMinutesDigit] = String(now.getMinutes()).padStart(2, "0").split("");
   const tensMinutes = getDigitAt(tensMinutesDigit, x - 9, y);
   if (tensMinutes) return tensMinutes;
   const onesMinutes = getDigitAt(onesMinutesDigit, x - 13, y);
   if (onesMinutes) return onesMinutes;
+  const [tensSecondsDigit, onesSecondsDigit] = String(now.getSeconds()).padStart(2, "0").split("");
   const tensSeconds = getDigitAt(tensSecondsDigit, x - 18, y);
   if (tensSeconds) return tensSeconds;
   const onesSeconds = getDigitAt(onesSecondsDigit, x - 22, y);
@@ -164,5 +162,5 @@ function getClockAngles(y, x, now) {
   const minuteAngle = ((time % msInHour) / msInHour) * Math.PI * 2 - Math.PI / 2;
   const hourAngle = ((time % (msInHour * 12)) / (msInHour * 12)) * Math.PI * 2 - Math.PI / 2;
 
-  return [hourAngle, minuteAngle, secondAngle, 1];
+  return [hourAngle, minuteAngle, secondAngle, 0];
 }
