@@ -16,6 +16,17 @@ const verticalN = 8;
 const frameInterval = 1000 / 30;
 let lastFrameTime = 0;
 
+const previousState = new Map();
+for (let i = 0; i < verticalN; i++) {
+  for (let j = 0; j < horixontalN; j++) {
+    previousState.set(`${i},${j}`, [-Math.PI / 2, -Math.PI / 2, -Math.PI / 2, 0]);
+  }
+}
+
+const initialInterpolationFactor = 0.95;
+const baseInterpolationFactor = 0.75;
+let isInitialAnimationDone = false;
+
 function draw(currentTime) {
   if (currentTime - lastFrameTime < frameInterval) {
     requestAnimationFrame(draw);
@@ -32,9 +43,9 @@ function draw(currentTime) {
   const unit = Math.min(width, height);
   const xOffset = height < width ? (Math.abs(width - height) * horixontalN) / 2 : 0;
   const yOffset = width < height ? (Math.abs(height - width) * verticalN) / 2 : 0;
-  console.log(xOffset, yOffset);
 
   const now = new Date();
+  const interpolationFactor = isInitialAnimationDone ? baseInterpolationFactor : initialInterpolationFactor;
 
   for (let i = 0; i < verticalN; i++) {
     for (let j = 0; j < horixontalN; j++) {
@@ -53,10 +64,25 @@ function draw(currentTime) {
       if (!angles) {
         continue;
       }
-      const [hourAngle, minuteAngle, secondAngle, isTrueTime] = angles;
+      const [nextHourAngle, nextMinuteAngle, nextSecondAngle, nextColorFactor] = angles;
+      const [previousHourAngle, previousMinuteAngle, previousSecondAngle, previousColorFactor] = previousState.get(
+        `${i},${j}`,
+      );
 
+      if (!isInitialAnimationDone && Math.abs(nextSecondAngle - previousSecondAngle) < 0.008) {
+        isInitialAnimationDone = true;
+      }
+
+      const hourAngle = previousHourAngle * interpolationFactor + nextHourAngle * (1 - interpolationFactor);
+      const minuteAngle = previousMinuteAngle * interpolationFactor + nextMinuteAngle * (1 - interpolationFactor);
+      const secondAngle = previousSecondAngle * interpolationFactor + nextSecondAngle * (1 - interpolationFactor);
+      const colorFactor = previousColorFactor * interpolationFactor + nextColorFactor * (1 - interpolationFactor);
+
+      previousState.set(`${i},${j}`, [hourAngle, minuteAngle, secondAngle, colorFactor]);
+
+      const colorHex = Math.floor(8 * (1 - colorFactor));
       ctx.beginPath();
-      ctx.strokeStyle = isTrueTime ? "#888" : "#000";
+      ctx.strokeStyle = `#${colorHex}${colorHex}${colorHex}`;
       ctx.lineWidth = radius * 0.06;
       ctx.moveTo(x, y);
       ctx.lineTo(x + Math.cos(hourAngle) * radius * 0.7, y + Math.sin(hourAngle) * radius * 0.7);
@@ -138,5 +164,5 @@ function getClockAngles(y, x, now) {
   const minuteAngle = ((time % msInHour) / msInHour) * Math.PI * 2 - Math.PI / 2;
   const hourAngle = ((time % (msInHour * 12)) / (msInHour * 12)) * Math.PI * 2 - Math.PI / 2;
 
-  return [hourAngle, minuteAngle, secondAngle, true];
+  return [hourAngle, minuteAngle, secondAngle, 1];
 }
