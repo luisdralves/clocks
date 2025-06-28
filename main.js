@@ -11,7 +11,7 @@ function resizeCanvas() {
 resizeCanvas();
 window.addEventListener("resize", resizeCanvas);
 
-const horixontalN = 19;
+const horixontalN = 28;
 const verticalN = 8;
 const frameInterval = 1000 / 30;
 let lastFrameTime = 0;
@@ -29,25 +29,34 @@ function draw(currentTime) {
 
   const width = canvas.width / horixontalN;
   const height = canvas.height / verticalN;
+  const unit = Math.min(width, height);
+  const xOffset = height < width ? (Math.abs(width - height) * horixontalN) / 2 : 0;
+  const yOffset = width < height ? (Math.abs(height - width) * verticalN) / 2 : 0;
+  console.log(xOffset, yOffset);
+
+  const now = new Date();
 
   for (let i = 0; i < verticalN; i++) {
     for (let j = 0; j < horixontalN; j++) {
       ctx.beginPath();
       ctx.fillStyle = "white";
-      const x = (j + 0.5) * width;
-      const y = (i + 0.5) * height;
-      const radius = Math.min(width, height) * 0.45;
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = "#000";
+      const x = (j + 0.5) * unit + xOffset;
+      const y = (i + 0.5) * unit + yOffset;
+      const radius = unit * 0.5;
       ctx.arc(x, y, radius, 0, Math.PI * 2);
       ctx.fill();
+      ctx.stroke();
 
-      const angles = getClockAngles(i, j);
+      const angles = getClockAngles(i, j, now);
       if (!angles) {
         continue;
       }
-      const [hourAngle, minuteAngle, secondAngle] = angles;
+      const [hourAngle, minuteAngle, secondAngle, isTrueTime] = angles;
 
       ctx.beginPath();
-      ctx.strokeStyle = "black";
+      ctx.strokeStyle = isTrueTime ? "#888" : "#000";
       ctx.lineWidth = radius * 0.06;
       ctx.moveTo(x, y);
       ctx.lineTo(x + Math.cos(hourAngle) * radius * 0.7, y + Math.sin(hourAngle) * radius * 0.7);
@@ -93,14 +102,34 @@ function directionToAngle(direction) {
   }
 }
 
-function getClockAngles(y, x) {
+function getDigitAt(digit, x, y) {
   const key = `${x - 1},${y - 1}`;
-  if (digits[1][key]) {
-    const directions = digits[1][key];
+  if (digits[digit]?.[key]) {
+    const directions = digits[digit][key];
     return [directionToAngle(directions[0]), directionToAngle(directions[1]), directionToAngle(directions[0])];
   }
+  return null;
+}
 
-  const now = new Date();
+function getClockAngles(y, x, now) {
+  const [tensHoursDigit, onesHoursDigit, tensMinutesDigit, onesMinutesDigit, tensSecondsDigit, onesSecondsDigit] = now
+    .toISOString()
+    .split("T")[1]
+    .replace(/:/g, "")
+    .split("");
+  const tensHours = getDigitAt(tensHoursDigit, x, y);
+  if (tensHours) return tensHours;
+  const onesHours = getDigitAt(onesHoursDigit, x - 4, y);
+  if (onesHours) return onesHours;
+  const tensMinutes = getDigitAt(tensMinutesDigit, x - 9, y);
+  if (tensMinutes) return tensMinutes;
+  const onesMinutes = getDigitAt(onesMinutesDigit, x - 13, y);
+  if (onesMinutes) return onesMinutes;
+  const tensSeconds = getDigitAt(tensSecondsDigit, x - 18, y);
+  if (tensSeconds) return tensSeconds;
+  const onesSeconds = getDigitAt(onesSecondsDigit, x - 22, y);
+  if (onesSeconds) return onesSeconds;
+
   const time = now.getTime();
   const msInHour = 3600000;
   const msInMinute = 60000;
@@ -109,5 +138,5 @@ function getClockAngles(y, x) {
   const minuteAngle = ((time % msInHour) / msInHour) * Math.PI * 2 - Math.PI / 2;
   const hourAngle = ((time % (msInHour * 12)) / (msInHour * 12)) * Math.PI * 2 - Math.PI / 2;
 
-  return [hourAngle, minuteAngle, secondAngle];
+  return [hourAngle, minuteAngle, secondAngle, true];
 }
