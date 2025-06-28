@@ -1,4 +1,4 @@
-import { digits } from "./digits.js";
+import { digits4by6 as digits } from "./digits.js";
 
 const canvas = document.querySelector("canvas");
 const ctx = canvas.getContext("2d");
@@ -11,7 +11,7 @@ function resizeCanvas() {
 resizeCanvas();
 window.addEventListener("resize", resizeCanvas);
 
-const horixontalN = 15;
+const horixontalN = 19;
 const verticalN = 8;
 const frameInterval = 1000 / 30;
 let lastFrameTime = 0;
