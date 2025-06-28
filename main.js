@@ -3,9 +3,12 @@ import { digits4by6 as digits } from "./digits.js";
 const canvas = document.querySelector("canvas");
 const ctx = canvas.getContext("2d");
 
+let isPortrait;
 function resizeCanvas() {
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = window.innerWidth * dpr;
+  canvas.height = window.innerHeight * dpr;
+  isPortrait = window.innerHeight > window.innerWidth;
 }
 
 resizeCanvas();
@@ -68,8 +71,15 @@ function draw(currentTime) {
   ctx.fillStyle = "black";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  const width = canvas.width / horixontalN;
-  const height = canvas.height / verticalN;
+  if (isPortrait) {
+    ctx.save();
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.translate(-canvas.height / 2, -canvas.width / 2);
+  }
+
+  const width = (isPortrait ? canvas.height : canvas.width) / horixontalN;
+  const height = (isPortrait ? canvas.width : canvas.height) / verticalN;
   const unit = Math.min(width, height);
   const xOffset = height < width ? (Math.abs(width - height) * horixontalN) / 2 : 0;
   const yOffset = width < height ? (Math.abs(height - width) * verticalN) / 2 : 0;
@@ -139,6 +149,10 @@ function draw(currentTime) {
       ctx.lineTo(x + Math.cos(secondAngle) * baseLength * 0.95, y + Math.sin(secondAngle) * baseLength * 0.95);
       ctx.stroke();
     }
+  }
+
+  if (isPortrait) {
+    ctx.restore();
   }
 
   requestAnimationFrame(draw);
