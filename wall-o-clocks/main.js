@@ -15,7 +15,7 @@ resizeCanvas();
 window.addEventListener("resize", resizeCanvas);
 
 const horixontalN = 28;
-const verticalN = 8;
+const verticalN = 12;
 const frameInterval = 1000 / 30;
 let lastFrameTime = 0;
 
@@ -182,7 +182,7 @@ function directionToAngle(direction) {
 }
 
 function getDigitAt(digit, x, y) {
-  const key = `${x - 1},${y - 1}`;
+  const key = `${x - 1},${y - 3}`;
   if (digits[digit]?.[key]) {
     const directions = digits[digit][key];
     return [directionToAngle(directions[0]), directionToAngle(directions[1]), directionToAngle(directions[0]), 1];
