@@ -207,13 +207,13 @@ function getClockAngles(y, x, now) {
   const onesSeconds = getDigitAt(onesSecondsDigit, x - 22, y);
   if (onesSeconds) return onesSeconds;
 
-  const time = now.getTime();
-  const msInHour = 3600000;
-  const msInMinute = 60000;
+  const seconds = now.getSeconds() + now.getMilliseconds() / 1000;
+  const minutes = now.getMinutes() + seconds / 60;
+  const hours = (now.getHours() % 12) + minutes / 60;
 
-  const secondAngle = ((time % msInMinute) / msInMinute) * Math.PI * 2 - Math.PI / 2;
-  const minuteAngle = ((time % msInHour) / msInHour) * Math.PI * 2 - Math.PI / 2;
-  const hourAngle = ((time % (msInHour * 12)) / (msInHour * 12)) * Math.PI * 2 - Math.PI / 2;
+  const secondAngle = (seconds / 60) * Math.PI * 2 - Math.PI / 2;
+  const minuteAngle = (minutes / 60) * Math.PI * 2 - Math.PI / 2;
+  const hourAngle = (hours / 12) * Math.PI * 2 - Math.PI / 2;
 
   return [hourAngle, minuteAngle, secondAngle, 0];
 }
