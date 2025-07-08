@@ -17,7 +17,7 @@ let lastFrameTime = 0;
 const initialInterpolationFactor = 0.95;
 const baseInterpolationFactor = 0.75;
 let isInitialAnimationDone = false;
-const maxZoom = 0.75;
+const maxZoom = 0.5;
 const minZoom = 0.05;
 const maxDistance = 1;
 
@@ -63,7 +63,6 @@ function draw(currentTime) {
     getZoom(Math.min(distanceToTarget, distanceToPrevious)),
     Math.sqrt(interpolationFactor),
   );
-  const neededSquares = Math.floor(1 / zoom) + 1;
 
   if (!isInitialAnimationDone && zoom >= maxZoom / 2) {
     isInitialAnimationDone = true;
@@ -74,7 +73,9 @@ function draw(currentTime) {
   previousState.zoom = zoom;
 
   ctx.save();
-  ctx.translate(((1 - zoom) * canvas.width) / 2, ((1 - zoom) * canvas.height) / 2);
+  const translateX = ((1 - zoom) * canvas.width) / 2;
+  const translateY = ((1 - zoom) * canvas.height) / 2;
+  ctx.translate(translateX, translateY);
   ctx.scale(zoom, zoom);
   ctx.lineWidth = 8;
   ctx.strokeStyle = "red";
@@ -86,28 +87,30 @@ function draw(currentTime) {
   const fontSize = Math.min(canvas.width / 8, canvas.height / 2);
   ctx.font = `${fontSize}px monospace`;
 
-  for (let i = -neededSquares; i <= neededSquares; i++) {
-    for (let j = -neededSquares; j <= neededSquares; j++) {
-      const digits = String(coordinatesToIndex(Math.floor(x) + 1 + i, Math.floor(y) + 1 + j)).padStart(6, "0");
-      const hours = digits.slice(0, 2);
-      const minutes = digits.slice(2, 4);
-      const seconds = digits.slice(4, 6);
-      const isValid = hours >= 0 && hours <= 23 && minutes >= 0 && minutes <= 59 && seconds >= 0 && seconds <= 59;
+  const visibleLeft = -translateX / zoom - (canvas.width);
+  const visibleTop = -translateY / zoom - (canvas.height);
+  const visibleRight = (canvas.width - translateX) / zoom + (canvas.width);
+  const visibleBottom = (canvas.height - translateY) / zoom + (canvas.height);
 
-      ctx.fillStyle = isValid ? "green" : "red";
-      ctx.fillRect(
-        (i + xOffset) * canvas.width - borderWidth / 2,
-        (j + yOffset) * canvas.height - borderWidth / 2,
-        canvas.width - borderWidth,
-        canvas.height - borderWidth,
-      );
+  let squaresDrawn = 0;
+  let ringIndex = 0;
+  let drawMoreRings = true;
+  while (drawMoreRings) {
+    const points = getRingPoints(ringIndex++);
 
-      ctx.fillStyle = "white";
-      ctx.fillText(
-        `${hours} ${minutes} ${seconds}`,
-        (i + xOffset) * canvas.width + canvas.width / 2,
-        (j + yOffset) * canvas.height + canvas.height / 2,
-      );
+    for (const [i, j] of points) {
+      squaresDrawn++;
+      if (
+        drawMoreRings &&
+        (i * canvas.width < visibleLeft ||
+          i * canvas.width > visibleRight ||
+          j * canvas.height < visibleTop ||
+          j * canvas.height > visibleBottom)
+      ) {
+        drawMoreRings = false;
+      }
+
+      drawSquareAt(ctx, x, y, i, j, xOffset, yOffset);
     }
   }
 
@@ -117,6 +120,9 @@ function draw(currentTime) {
   ctx.fillStyle = "white";
   ctx.font = `${fontSize * maxZoom}px monospace`;
   ctx.fillText(":  :", canvas.width / 2, canvas.height / 2);
+  ctx.textAlign = "left";
+  ctx.textBaseline = "top";
+  ctx.fillText(squaresDrawn, 0, 0);
   requestAnimationFrame(draw);
 }
 
@@ -134,4 +140,62 @@ function coordinatesToIndex(x, y) {
 
 function indexToCoordinates(index) {
   return [index % n, Math.floor(index / n)];
+}
+
+const ringPoints = new Map([[0, [[0, 0]]]]);
+
+function getRingPoints(ringIndex) {
+  const points = ringPoints.get(ringIndex) ?? [];
+  if (points.length) {
+    return points;
+  }
+
+  let x = ringIndex;
+  let y = -ringIndex + 1;
+
+  const directions = [
+    { dx: 0, dy: 1 },
+    { dx: -1, dy: 0 },
+    { dx: 0, dy: -1 },
+    { dx: 1, dy: 0 },
+  ];
+
+  x = ringIndex;
+  y = -ringIndex;
+
+  for (let side = 0; side < 4; side++) {
+    const { dx, dy } = directions[side];
+    for (let step = 0; step < 2 * ringIndex; step++) {
+      points.push([x, y]);
+      x += dx;
+      y += dy;
+    }
+  }
+
+  ringPoints.set(ringIndex, points);
+
+  return points;
+}
+
+function drawSquareAt(ctx, x, y, i, j, xOffset, yOffset) {
+  const digits = String(coordinatesToIndex(Math.floor(x) + 1 + i, Math.floor(y) + j)).padStart(6, "0");
+  const hours = digits.slice(0, 2);
+  const minutes = digits.slice(2, 4);
+  const seconds = digits.slice(4, 6);
+  const isValid = hours >= 0 && hours <= 23 && minutes >= 0 && minutes <= 59 && seconds >= 0 && seconds <= 59;
+
+  ctx.fillStyle = isValid ? "green" : "red";
+  ctx.fillRect(
+    (i + xOffset) * canvas.width - borderWidth / 2,
+    (j + yOffset - 1) * canvas.height - borderWidth / 2,
+    canvas.width - borderWidth,
+    canvas.height - borderWidth,
+  );
+
+  ctx.fillStyle = "white";
+  ctx.fillText(
+    `${hours} ${minutes} ${seconds}`,
+    (i + xOffset) * canvas.width + canvas.width / 2,
+    (j + yOffset - 1) * canvas.height + canvas.height / 2,
+  );
 }
