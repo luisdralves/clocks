@@ -1,201 +1,167 @@
-const canvas = document.querySelector("canvas");
-const ctx = canvas.getContext("2d");
+// Canvas and WebGL Context
+const canvas = document.getElementById('glCanvas');
+const gl = canvas.getContext('webgl2') || canvas.getContext('experimental-webgl2');
 
+if (!gl) {
+  alert('WebGL not supported in your browser!');
+  throw new Error('No WebGL support');
+}
+
+// Resize canvas to fullscreen
 function resizeCanvas() {
   const dpr = window.devicePixelRatio || 1;
+  
+  // Set the display size (CSS pixels)
+  canvas.style.width = `${window.innerWidth}px`;
+  canvas.style.height = `${window.innerHeight}px`;
+  
+  // Set the actual size in memory (scaled up for high DPR)
   canvas.width = window.innerWidth * dpr;
   canvas.height = window.innerHeight * dpr;
+  
+  // Set the WebGL viewport
+  gl.viewport(0, 0, canvas.width, canvas.height);
 }
-
+window.addEventListener('resize', resizeCanvas);
 resizeCanvas();
-window.addEventListener("resize", resizeCanvas);
+  
+async function main() {
+  const vsSource = await (await fetch('/precalculated-grid/vertex.glsl')).text();
+  const fsSource = await (await fetch('/precalculated-grid/fragment.glsl')).text();
 
-const n = 486;
-const borderWidth = 8;
-const frameInterval = 1000 / 60;
-let lastFrameTime = 0;
-const initialInterpolationFactor = 0.95;
-const baseInterpolationFactor = 0.75;
-let isInitialAnimationDone = false;
-const maxZoom = 0.5;
-const minZoom = 0.05;
-const maxDistance = 1;
-
-const previousState = {
-  x: n / 2,
-  y: n / 2,
-  zoom: minZoom,
-};
-
-function getZoom(distance) {
-  return Math.min(maxZoom, Math.max(minZoom, ((minZoom - maxZoom) * distance) / maxDistance + maxZoom));
-}
-
-function interpolate(previousValue, nextValue, interpolationFactor) {
-  return interpolationFactor * previousValue + (1 - interpolationFactor) * nextValue;
-}
-
-function draw(currentTime) {
-  if (currentTime - lastFrameTime < frameInterval) {
-    requestAnimationFrame(draw);
-    return;
-  }
-
-  lastFrameTime = currentTime;
-
-  ctx.fillStyle = "black";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-  const now = new Date();
-  const targetIndex = timeToIndex(now);
-  const [targetX, targetY] = indexToCoordinates(targetIndex);
-  now.setSeconds(now.getSeconds() - 1);
-  const previousIndex = timeToIndex(now);
-  const [previousX, previousY] = indexToCoordinates(previousIndex);
-
-  const interpolationFactor = isInitialAnimationDone ? baseInterpolationFactor : initialInterpolationFactor;
-  const x = interpolate(previousState.x, targetX, interpolationFactor);
-  const y = interpolate(previousState.y, targetY, interpolationFactor);
-  const distanceToTarget = Math.sqrt((x - targetX) ** 2 + (y - targetY) ** 2);
-  const distanceToPrevious = Math.sqrt((x - previousX) ** 2 + (y - previousY) ** 2);
-  const zoom = interpolate(
-    previousState.zoom,
-    getZoom(Math.min(distanceToTarget, distanceToPrevious)),
-    Math.sqrt(interpolationFactor),
-  );
-
-  if (!isInitialAnimationDone && zoom >= maxZoom / 2) {
-    isInitialAnimationDone = true;
-  }
-
-  previousState.x = x;
-  previousState.y = y;
-  previousState.zoom = zoom;
-
-  ctx.save();
-  const translateX = ((1 - zoom) * canvas.width) / 2;
-  const translateY = ((1 - zoom) * canvas.height) / 2;
-  ctx.translate(translateX, translateY);
-  ctx.scale(zoom, zoom);
-  ctx.lineWidth = 8;
-  ctx.strokeStyle = "red";
-  const xOffset = 1 - (x - Math.floor(x));
-  const yOffset = 1 - (y - Math.floor(y));
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillStyle = "white";
-  const fontSize = Math.min(canvas.width / 8, canvas.height / 2);
-  ctx.font = `${fontSize}px monospace`;
-
-  const visibleLeft = -translateX / zoom - (canvas.width);
-  const visibleTop = -translateY / zoom - (canvas.height);
-  const visibleRight = (canvas.width - translateX) / zoom + (canvas.width);
-  const visibleBottom = (canvas.height - translateY) / zoom + (canvas.height);
-
-  let squaresDrawn = 0;
-  let ringIndex = 0;
-  let drawMoreRings = true;
-  while (drawMoreRings) {
-    const points = getRingPoints(ringIndex++);
-
-    for (const [i, j] of points) {
-      squaresDrawn++;
-      if (
-        drawMoreRings &&
-        (i * canvas.width < visibleLeft ||
-          i * canvas.width > visibleRight ||
-          j * canvas.height < visibleTop ||
-          j * canvas.height > visibleBottom)
-      ) {
-        drawMoreRings = false;
-      }
-
-      drawSquareAt(ctx, x, y, i, j, xOffset, yOffset);
+  // Compile Shader Function
+  function compileShader(gl, source, type) {
+    const shader = gl.createShader(type);
+    gl.shaderSource(shader, source);
+    gl.compileShader(shader);
+    
+    // Add proper error handling
+    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+      const error = gl.getShaderInfoLog(shader);
+      console.error(`Shader compilation error (${type === gl.VERTEX_SHADER ? 'vertex' : 'fragment'}): ${error}`);
+      alert(`Shader compilation error:\n${error}`);
+      return null;
     }
+    return shader;
   }
 
-  ctx.restore();
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillStyle = "white";
-  ctx.font = `${fontSize * maxZoom}px monospace`;
-  ctx.fillText(":  :", canvas.width / 2, canvas.height / 2);
-  ctx.textAlign = "left";
-  ctx.textBaseline = "top";
-  ctx.fillText(squaresDrawn, 0, 0);
-  requestAnimationFrame(draw);
-}
+  // Create Shader Program
+  const vertexShader = compileShader(gl, vsSource, gl.VERTEX_SHADER);
+  const fragmentShader = compileShader(gl, fsSource, gl.FRAGMENT_SHADER);
 
-requestAnimationFrame(draw);
-
-function timeToIndex(time) {
-  return Number(
-    `${String(time.getHours()).padStart(2, "0")}${String(time.getMinutes()).padStart(2, "0")}${String(time.getSeconds()).padStart(2, "0")}`,
-  );
-}
-
-function coordinatesToIndex(x, y) {
-  return x + y * n;
-}
-
-function indexToCoordinates(index) {
-  return [index % n, Math.floor(index / n)];
-}
-
-const ringPoints = new Map([[0, [[0, 0]]]]);
-
-function getRingPoints(ringIndex) {
-  const points = ringPoints.get(ringIndex) ?? [];
-  if (points.length) {
-    return points;
+  // Check if shaders compiled successfully
+  if (!vertexShader || !fragmentShader) {
+    throw new Error('Shader compilation failed');
   }
 
-  let x = ringIndex;
-  let y = -ringIndex + 1;
+  const shaderProgram = gl.createProgram();
+  gl.attachShader(shaderProgram, vertexShader);
+  gl.attachShader(shaderProgram, fragmentShader);
+  gl.linkProgram(shaderProgram);
 
-  const directions = [
-    { dx: 0, dy: 1 },
-    { dx: -1, dy: 0 },
-    { dx: 0, dy: -1 },
-    { dx: 1, dy: 0 },
-  ];
+  if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+    const error = gl.getProgramInfoLog(shaderProgram);
+    console.error('Program linking error:', error);
+    alert(`Shader program link error:\n${error}`);
+    throw new Error('Program linking failed');
+  }
 
-  x = ringIndex;
-  y = -ringIndex;
+  gl.useProgram(shaderProgram);
 
-  for (let side = 0; side < 4; side++) {
-    const { dx, dy } = directions[side];
-    for (let step = 0; step < 2 * ringIndex; step++) {
-      points.push([x, y]);
-      x += dx;
-      y += dy;
+  // Fullscreen Quad Geometry
+  const positions = new Float32Array([
+    -1.0, -1.0,
+    1.0, -1.0,
+    -1.0,  1.0,
+    1.0,  1.0
+  ]);
+
+  const positionBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, positions, gl.STATIC_DRAW);
+
+  const aPosition = gl.getAttribLocation(shaderProgram, 'aPosition');
+  gl.enableVertexAttribArray(aPosition);
+  gl.vertexAttribPointer(aPosition, 2, gl.FLOAT, false, 0, 0);
+
+  // Set Uniform Locations
+  const uResolution = gl.getUniformLocation(shaderProgram, 'u_resolution');
+  const uN = gl.getUniformLocation(shaderProgram, 'u_n');
+  const uI = gl.getUniformLocation(shaderProgram, 'u_i');
+  const uJ = gl.getUniformLocation(shaderProgram, 'u_j');
+  const uZoom = gl.getUniformLocation(shaderProgram, 'u_zoom');
+
+  // Initial Uniform Values
+  let n = 486.0;
+  let i = 243.0;
+  let j = 243.0;
+  let zoom = 0.5;
+  let lastTime = performance.now();
+
+  function timeToIndex(time) {
+    return Number(
+      `${String(time.getHours()).padStart(2, "0")}${String(time.getMinutes()).padStart(2, "0")}${String(time.getSeconds()).padStart(2, "0")}`,
+    );
+  }
+
+  function indexToCoordinates(index) {
+    return [index % n, Math.floor(index / n)];
+  }
+
+  function getZoom(distance) {
+    return Math.min(0.999, Math.max(0.5, ((0.5 - 0.999) * distance) / n + 0.999));
+  }
+
+  function interpolate(previousValue, nextValue, interpolationFactor) {
+    return interpolationFactor * previousValue + (1 - interpolationFactor) * nextValue;
+  }
+
+  function render(currentTime) {
+    const deltaTime = currentTime - lastTime;
+    lastTime = currentTime;
+    
+    // Convert to seconds and apply a time-based interpolation factor
+    const timeStep = deltaTime / 1000; // Convert ms to seconds
+    const interpolationFactor = 0.001 ** timeStep; // This gives us consistent behavior regardless of frame rate
+    
+    const previousI = i;
+    const previousJ = j;
+    const previousZoom = zoom;
+    const targetIndex = timeToIndex(new Date());
+    const [targetI, targetJ] = indexToCoordinates(targetIndex);
+    i = interpolate(previousI, targetI+0.5, interpolationFactor);
+    j = interpolate(previousJ, targetJ+0.5, interpolationFactor);
+    const distanceToTarget = Math.sqrt((i - targetI) ** 2 + (j - targetJ) ** 2);
+    const distanceToPrevious = Math.sqrt((i - previousI) ** 2 + (j - previousJ) ** 2);
+    zoom = interpolate(previousZoom, getZoom(8*Math.min(distanceToTarget, distanceToPrevious)), Math.sqrt(interpolationFactor));
+
+    // WebGL rendering - use actual canvas dimensions for gl_FragCoord matching
+    gl.uniform2f(uResolution, canvas.width, canvas.height);
+    gl.uniform1f(uN, n);
+    gl.uniform1f(uI, i);
+    gl.uniform1f(uJ, j);
+    gl.uniform1f(uZoom, zoom);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    
+    requestAnimationFrame(render);
+  }
+  render(performance.now());
+
+  // Interactive Controls
+  document.addEventListener('keydown', (e) => {
+    const step = 0.1;
+    switch (e.key) {
+      case 'ArrowUp': j -= step; break;
+      case 'ArrowDown': j += step; break;
+      case 'ArrowLeft': i -= step; break;
+      case 'ArrowRight': i += step; break;
+      case '+': zoom = Math.min(zoom+0.001, 1); break;
+      case '-': zoom = Math.max(zoom-0.001, 0); break;
+      case '0': n = Math.max(n - 1, 1); break;  // Decrease grid size
+      case '1': n += 1; break;                 // Increase grid size
     }
-  }
-
-  ringPoints.set(ringIndex, points);
-
-  return points;
+    console.log(`i: ${i.toFixed(1)}, j: ${j.toFixed(1)}, zoom: ${zoom.toFixed(2)}, n: ${n}`);
+  });
 }
 
-function drawSquareAt(ctx, x, y, i, j, xOffset, yOffset) {
-  const digits = String(coordinatesToIndex(Math.floor(x) + 1 + i, Math.floor(y) + j)).padStart(6, "0");
-  const hours = digits.slice(0, 2);
-  const minutes = digits.slice(2, 4);
-  const seconds = digits.slice(4, 6);
-  const isValid = hours >= 0 && hours <= 23 && minutes >= 0 && minutes <= 59 && seconds >= 0 && seconds <= 59;
-
-  ctx.fillStyle = isValid ? "green" : "red";
-  ctx.fillRect(
-    (i + xOffset) * canvas.width - borderWidth / 2,
-    (j + yOffset - 1) * canvas.height - borderWidth / 2,
-    canvas.width - borderWidth,
-    canvas.height - borderWidth,
-  );
-
-  ctx.fillStyle = "white";
-  ctx.fillText(
-    `${hours} ${minutes} ${seconds}`,
-    (i + xOffset) * canvas.width + canvas.width / 2,
-    (j + yOffset - 1) * canvas.height + canvas.height / 2,
-  );
-}
+main();
