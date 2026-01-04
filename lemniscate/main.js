@@ -27,7 +27,7 @@ function lemniscatePoint(t, scale) {
   const sinT = Math.sin(t);
   const cosT = Math.cos(t);
   const denom = 1 + sinT * sinT;
-  const x = (scale * cosT) / denom;
+  const x = (-scale * cosT) / denom; // Negated to put morning on the right
   const y = (scale * sinT * cosT * verticalStretch) / denom;
   return { x, y };
 }
@@ -52,6 +52,45 @@ function lemniscateNormal(t) {
   return { x: nx, y: ny };
 }
 
+// Build arc-length lookup table for uniform distribution
+const arcLengthSamples = 1000;
+const arcLengthTable = [];
+let totalArcLength = 0;
+for (let i = 0; i <= arcLengthSamples; i++) {
+  const t = (i / arcLengthSamples) * Math.PI * 2;
+  if (i > 0) {
+    const prevT = ((i - 1) / arcLengthSamples) * Math.PI * 2;
+    const p1 = lemniscatePoint(prevT, 1);
+    const p2 = lemniscatePoint(t, 1);
+    const dx = p2.x - p1.x;
+    const dy = p2.y - p1.y;
+    totalArcLength += Math.sqrt(dx * dx + dy * dy);
+  }
+  arcLengthTable.push({ t, arcLength: totalArcLength });
+}
+
+// Returns parameter t for a given normalized arc length (0 to 1)
+function arcLengthToT(normalizedArc) {
+  const targetLength = normalizedArc * totalArcLength;
+  // Binary search for the right segment
+  let low = 0;
+  let high = arcLengthTable.length - 1;
+  while (low < high - 1) {
+    const mid = Math.floor((low + high) / 2);
+    if (arcLengthTable[mid].arcLength < targetLength) {
+      low = mid;
+    } else {
+      high = mid;
+    }
+  }
+  // Interpolate between low and high
+  const a = arcLengthTable[low];
+  const b = arcLengthTable[high];
+  const segmentLength = b.arcLength - a.arcLength;
+  const segmentFraction = segmentLength > 0 ? (targetLength - a.arcLength) / segmentLength : 0;
+  return a.t + segmentFraction * (b.t - a.t);
+}
+
 function draw(currentTime) {
   if (currentTime - lastFrameTime < frameInterval) {
     requestAnimationFrame(draw);
@@ -64,7 +103,14 @@ function draw(currentTime) {
 
   const centerX = canvas.width / 2;
   const centerY = canvas.height / 2;
-  const scale = Math.min(canvas.width, canvas.height) * 0.4;
+  // Lemniscate spans 2 units wide and ~1.25 units tall (with verticalStretch)
+  const lemniscateWidth = 2;
+  const lemniscateHeight = verticalStretch;
+  const padding = 0.9; // Leave some margin
+  const scale = Math.min(
+    (canvas.width * padding) / lemniscateWidth,
+    (canvas.height * padding) / lemniscateHeight
+  );
 
   // Draw lemniscate filled
   ctx.beginPath();
@@ -87,7 +133,7 @@ function draw(currentTime) {
   for (let i = 0; i < 60; i++) {
     // Skip center crossing (minute 0 and 30)
     if (i === 0 || i === 30) continue;
-    const t = (i / 60) * Math.PI * 2 + Math.PI / 2;
+    const t = arcLengthToT((i / 60 + 0.25) % 1);
     const outerPoint = lemniscatePoint(t, scale);
     const normal = lemniscateNormal(t);
     const tickLength = scale * 0.025;
@@ -119,7 +165,7 @@ function draw(currentTime) {
   for (let i = 0; i < 24; i++) {
     // Skip center crossing (hour 0 and 12)
     if (i === 0 || i === 12) continue;
-    const t = (i / 24) * Math.PI * 2 + Math.PI / 2;
+    const t = arcLengthToT((i / 24 + 0.25) % 1);
     const outerPoint = lemniscatePoint(t, scale);
     const normal = lemniscateNormal(t);
     const tickLength = scale * 0.05;
@@ -164,10 +210,10 @@ function draw(currentTime) {
   secondSpring.velocity *= springDamping;
   secondSpring.position += secondSpring.velocity;
 
-  // Map time to parameter t (offset by π/2 so 0/12 are at center crossing)
-  const hourT = (hours / 24) * Math.PI * 2 + Math.PI / 2;
-  const minuteT = (minutes / 60) * Math.PI * 2 + Math.PI / 2;
-  const secondT = (secondSpring.position / 60) * Math.PI * 2 + Math.PI / 2;
+  // Map time to parameter t using arc-length parameterization
+  const hourT = arcLengthToT((hours / 24 + 0.25) % 1);
+  const minuteT = arcLengthToT((minutes / 60 + 0.25) % 1);
+  const secondT = arcLengthToT(((secondSpring.position / 60) % 1 + 1.25) % 1);
 
   // Hour hand
   const hourPoint = lemniscatePoint(hourT, scale * 0.5);
