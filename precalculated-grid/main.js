@@ -24,6 +24,8 @@ function resizeCanvas() {
 }
 window.addEventListener('resize', resizeCanvas);
 resizeCanvas();
+
+let baseInterpolationFactor = 0.2;
   
 async function main() {
   const vsSource = await (await fetch('/precalculated-grid/vertex.glsl')).text();
@@ -122,18 +124,22 @@ async function main() {
     
     // Convert to seconds and apply a time-based interpolation factor
     const timeStep = deltaTime / 1000; // Convert ms to seconds
-    const interpolationFactor = 0.001 ** timeStep; // This gives us consistent behavior regardless of frame rate
+    const stableInterpolationFactor = baseInterpolationFactor ** timeStep; // This gives us consistent behavior regardless of frame rate
     
     const previousI = i;
     const previousJ = j;
     const previousZoom = zoom;
     const targetIndex = timeToIndex(new Date());
     const [targetI, targetJ] = indexToCoordinates(targetIndex);
-    i = interpolate(previousI, targetI+0.5, interpolationFactor);
-    j = interpolate(previousJ, targetJ+0.5, interpolationFactor);
+    i = interpolate(previousI, targetI+0.5, stableInterpolationFactor);
+    j = interpolate(previousJ, targetJ+0.5, stableInterpolationFactor);
     const distanceToTarget = Math.sqrt((i - targetI) ** 2 + (j - targetJ) ** 2);
     const distanceToPrevious = Math.sqrt((i - previousI) ** 2 + (j - previousJ) ** 2);
-    zoom = interpolate(previousZoom, getZoom(8*Math.min(distanceToTarget, distanceToPrevious)), Math.sqrt(interpolationFactor));
+    zoom = interpolate(previousZoom, getZoom(8*Math.min(distanceToTarget, distanceToPrevious)), Math.sqrt(stableInterpolationFactor));
+
+    if(distanceToTarget < 1 && zoom > 0.99) {
+      baseInterpolationFactor = 0.01;
+    }
 
     // WebGL rendering - use actual canvas dimensions for gl_FragCoord matching
     gl.uniform2f(uResolution, canvas.width, canvas.height);

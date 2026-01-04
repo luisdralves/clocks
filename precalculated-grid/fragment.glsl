@@ -31,60 +31,60 @@ bool getSegment(in int digit, in int segment) {
 }
 
 float draw7Segment(in vec2 uv, in int digit, in float thickness) {
-  // Define segment positions (normalized coordinates within digit)
-  // Adjust thickness for uniform appearance across horizontal and vertical segments
-  // Since digits are wider than tall, we need different thickness values
-  float verticalThickness = thickness * 2.0;  // Thinner for vertical segments
-  float horizontalThickness = thickness;       // Normal thickness for horizontal segments
+  float verticalThickness = thickness * 2.0;
+  float horizontalThickness = thickness;
+  float verticalSpacing = thickness*1.75;
+  float horizontalSpacing = verticalSpacing * 2.0;
+  float verticalCenterSpacing = verticalSpacing * 0.5;
   
   // Check if current pixel is in any active segment
   float result = 0.0;
   
   // Segment a (top horizontal)
   if (getSegment(digit, 0)) {
-    if (uv.x >= 0.1 && uv.x <= 0.9 && uv.y >= 0.0 && uv.y <= horizontalThickness) {
+    if (uv.x >= horizontalSpacing && uv.x <= 1.0 - horizontalSpacing && uv.y >= 0.0 && uv.y <= horizontalThickness) {
       result = 1.0;
     }
   }
   
   // Segment b (top-right vertical)
   if (getSegment(digit, 1)) {
-    if (uv.x >= 1.0 - verticalThickness && uv.x <= 1.0 && uv.y >= 0.1 && uv.y <= 0.5) {
+    if (uv.x >= 1.0 - verticalThickness && uv.x <= 1.0 && uv.y >= verticalSpacing && uv.y <= 0.5 - verticalCenterSpacing) {
       result = 1.0;
     }
   }
   
   // Segment c (bottom-right vertical)
   if (getSegment(digit, 2)) {
-    if (uv.x >= 1.0 - verticalThickness && uv.x <= 1.0 && uv.y >= 0.5 && uv.y <= 0.9) {
+    if (uv.x >= 1.0 - verticalThickness && uv.x <= 1.0 && uv.y >= 0.5 + verticalCenterSpacing && uv.y <= 1.0 - verticalSpacing) {
       result = 1.0;
     }
   }
   
   // Segment d (bottom horizontal)
   if (getSegment(digit, 3)) {
-    if (uv.x >= 0.1 && uv.x <= 0.9 && uv.y >= 1.0 - horizontalThickness && uv.y <= 1.0) {
+    if (uv.x >= horizontalSpacing && uv.x <= 1.0 - horizontalSpacing && uv.y >= 1.0 - horizontalThickness && uv.y <= 1.0) {
       result = 1.0;
     }
   }
   
   // Segment e (bottom-left vertical)
   if (getSegment(digit, 4)) {
-    if (uv.x >= 0.0 && uv.x <= verticalThickness && uv.y >= 0.5 && uv.y <= 0.9) {
+    if (uv.x >= 0.0 && uv.x <= verticalThickness && uv.y >= 0.5 + verticalCenterSpacing && uv.y <= 1.0 - verticalSpacing) {
       result = 1.0;
     }
   }
   
   // Segment f (top-left vertical)
   if (getSegment(digit, 5)) {
-    if (uv.x >= 0.0 && uv.x <= verticalThickness && uv.y >= 0.1 && uv.y <= 0.5) {
+    if (uv.x >= 0.0 && uv.x <= verticalThickness && uv.y >= verticalSpacing && uv.y <= 0.5 - verticalCenterSpacing) {
       result = 1.0;
     }
   }
   
   // Segment g (middle horizontal)
   if (getSegment(digit, 6)) {
-    if (uv.x >= 0.1 && uv.x <= 0.9 && uv.y >= 0.5 - horizontalThickness * 0.5 && uv.y <= 0.5 + horizontalThickness * 0.5) {
+    if (uv.x >= horizontalSpacing && uv.x <= 1.0 - horizontalSpacing && uv.y >= 0.5 - horizontalThickness * 0.5 && uv.y <= 0.5 + horizontalThickness * 0.5) {
       result = 1.0;
     }
   }
@@ -129,8 +129,8 @@ void main() {
 
   // Set base color based on validity and border
   vec4 baseColor;
-  if (isBorder) {
-    baseColor = vec4(0.0, 0.0, 0.0, 1.0);  // Black border
+  if (u_zoom >= 0.9 && isBorder) {
+    baseColor = vec4(0.0, 0.0, 0.0, 1.0);  // Black border only when zoomed in
   } else if (isValidTime) {
     baseColor = vec4(0.0, 1.0, 0.0, 1.0);  // Green for valid timestamps
   } else {
@@ -140,71 +140,77 @@ void main() {
   // Calculate local position within the cell for digit rendering
   vec2 cellLocal = vec2(localX, localY);
   
-  // Calculate digit positions (6 digits: HH MM SS)
-  // Each digit should be 1/10 of width and 1/6 of height
-  float digitWidth = 0.08;  // Slightly smaller to add spacing
-  float digitHeight = 1.0 / 6.0;  // 1/6 of cell height
-  
-  // Spacing between individual digits and between groups
-  float digitSpacing = 0.02;  // Space between individual digits
-  float groupSpacing = 0.04;  // Extra space between groups (HH MM SS)
-  
-  // Calculate total width needed for all digits and spacing
-  float totalDigitWidth = 6.0 * digitWidth + 5.0 * digitSpacing + 2.0 * groupSpacing;
-  float horizontalOffset = (1.0 - totalDigitWidth) * 0.5;  // Center the entire digit group
-  float verticalOffset = 0.5 - digitHeight * 0.5;  // Center vertically
-  
-  // Calculate which digit position (0-5) the current pixel belongs to
-  float adjustedX = cellLocal.x - horizontalOffset;
-  int digitPos = -1;
-  
-  // Check each digit position with proper spacing using a loop
-  float digitStartPositions[6];
-  digitStartPositions[0] = 0.0;
-  digitStartPositions[1] = digitWidth + digitSpacing;
-  digitStartPositions[2] = 2.0 * (digitWidth + digitSpacing) + groupSpacing;
-  digitStartPositions[3] = 3.0 * (digitWidth + digitSpacing) + groupSpacing;
-  digitStartPositions[4] = 4.0 * (digitWidth + digitSpacing) + 2.0 * groupSpacing;
-  digitStartPositions[5] = 5.0 * (digitWidth + digitSpacing) + 2.0 * groupSpacing;
-  
-  for (int i = 0; i < 6; i++) {
-    if (adjustedX >= digitStartPositions[i] && adjustedX < digitStartPositions[i] + digitWidth) {
-      digitPos = i;
-      break;
-    }
-  }
-  
-  // Check if we're within the digit area
-  if (digitPos >= 0 && digitPos < 6 && 
-      cellLocal.y >= verticalOffset && cellLocal.y < verticalOffset + digitHeight) {
+  // Only render digits if zoomed in enough
+  if (u_zoom >= 0.95) {
+    // Calculate digit positions (6 digits: HH MM SS)
+    // Each digit should be 1/10 of width and 1/6 of height
+    float digitWidth = 0.08;  // Slightly smaller to add spacing
+    float digitHeight = 1.0 / 6.0;  // 1/6 of cell height
     
-    // Extract the appropriate digit using switch statement
-    int digit = 0;
-    switch (digitPos) {
-      case 0: digit = int(mod(hours / 10.0, 10.0)); break;
-      case 1: digit = int(mod(hours, 10.0)); break;
-      case 2: digit = int(mod(minutes / 10.0, 10.0)); break;
-      case 3: digit = int(mod(minutes, 10.0)); break;
-      case 4: digit = int(mod(seconds / 10.0, 10.0)); break;
-      case 5: digit = int(mod(seconds, 10.0)); break;
+    // Spacing between individual digits and between groups
+    float digitSpacing = 0.02;  // Space between individual digits
+    float groupSpacing = 0.04;  // Extra space between groups (HH MM SS)
+    
+    // Calculate total width needed for all digits and spacing
+    float totalDigitWidth = 6.0 * digitWidth + 5.0 * digitSpacing + 2.0 * groupSpacing;
+    float horizontalOffset = (1.0 - totalDigitWidth) * 0.5;  // Center the entire digit group
+    float verticalOffset = 0.5 - digitHeight * 0.5;  // Center vertically
+    
+    // Calculate which digit position (0-5) the current pixel belongs to
+    float adjustedX = cellLocal.x - horizontalOffset;
+    int digitPos = -1;
+    
+    // Check each digit position with proper spacing using a loop
+    float digitStartPositions[6];
+    digitStartPositions[0] = 0.0;
+    digitStartPositions[1] = digitWidth + digitSpacing;
+    digitStartPositions[2] = 2.0 * (digitWidth + digitSpacing) + groupSpacing;
+    digitStartPositions[3] = 3.0 * (digitWidth + digitSpacing) + groupSpacing;
+    digitStartPositions[4] = 4.0 * (digitWidth + digitSpacing) + 2.0 * groupSpacing;
+    digitStartPositions[5] = 5.0 * (digitWidth + digitSpacing) + 2.0 * groupSpacing;
+    
+    for (int i = 0; i < 6; i++) {
+      if (adjustedX >= digitStartPositions[i] && adjustedX < digitStartPositions[i] + digitWidth) {
+        digitPos = i;
+        break;
+      }
     }
     
-    // Calculate UV coordinates within the digit (normalized to 0-1)
-    float digitStartX = digitStartPositions[digitPos];
-    vec2 digitUV = vec2(
-      (adjustedX - digitStartX) / digitWidth,
-      (cellLocal.y - verticalOffset) / digitHeight
-    );
-    
-    // Render the digit
-    float digitValue = draw7Segment(digitUV, digit, 0.05);
-    
-    if (digitValue > 0.0) {
-      fragColor = vec4(1.0, 1.0, 1.0, 1.0);  // White digits
+    // Check if we're within the digit area
+    if (digitPos >= 0 && digitPos < 6 && 
+        cellLocal.y >= verticalOffset && cellLocal.y < verticalOffset + digitHeight) {
+      
+      // Extract the appropriate digit using switch statement
+      int digit = 0;
+      switch (digitPos) {
+        case 0: digit = int(mod(hours / 10.0, 10.0)); break;
+        case 1: digit = int(mod(hours, 10.0)); break;
+        case 2: digit = int(mod(minutes / 10.0, 10.0)); break;
+        case 3: digit = int(mod(minutes, 10.0)); break;
+        case 4: digit = int(mod(seconds / 10.0, 10.0)); break;
+        case 5: digit = int(mod(seconds, 10.0)); break;
+      }
+      
+      // Calculate UV coordinates within the digit (normalized to 0-1)
+      float digitStartX = digitStartPositions[digitPos];
+      vec2 digitUV = vec2(
+        (adjustedX - digitStartX) / digitWidth,
+        (cellLocal.y - verticalOffset) / digitHeight
+      );
+      
+      // Render the digit
+      float digitValue = draw7Segment(digitUV, digit, 0.05);
+      
+      if (digitValue > 0.0) {
+        fragColor = vec4(1.0, 1.0, 1.0, 1.0);  // White digits
+      } else {
+        fragColor = baseColor;  // Use the base color (green/red)
+      }
     } else {
-      fragColor = baseColor;  // Use the base color (green/red)
+      fragColor = baseColor;  // Use the base color outside digit area
     }
   } else {
-    fragColor = baseColor;  // Use the base color outside digit area
+    // When not zoomed in enough, just use the base color without digits or borders
+    fragColor = baseColor;
   }
 }
