@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <title>Daylight Clock</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            height: 100svh;
+        }
+        #info {
+            position: absolute;
+            top: 1.5rem;
+            left: 1.5rem;
+            z-index: 1;
+        }
+        #poem {
+            font-family: Georgia, serif;
+            font-style: italic;
+            font-size: 1.1rem;
+            line-height: 1.7;
+        }
+        #poem .indent {
+            margin-left: 1.5rem;
+        }
+        #details {
+            margin-top: 1rem;
+            font-family: system-ui, sans-serif;
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+        canvas {
+            flex: 1;
+            width: 100vw;
+            width: 100svw;
+        }
+    </style>
+</head>
+<body>
+    <div id="info">
+        <div id="poem">
+            A clock that tells time a new way<br>
+            12 hours of light every day<br>
+            <span class="indent">At 6 comes the dawn</span><br>
+            <span class="indent">18, light is gone</span><br>
+            The seconds will stretch and will sway!
+        </div>
+        <div id="details">
+            Current time would be <span id="temporal-time">--:--:--</span><br>
+            Each second would last <span id="second-length">--.-----</span> real seconds
+        </div>
+    </div>
+    <canvas></canvas>
+    <script src="/daylight/main.js" type="module"></script>
+</body>
+</html>
