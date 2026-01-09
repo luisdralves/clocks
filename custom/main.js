@@ -15,6 +15,11 @@ const PRESETS = {
     numberStyle: "arabic",
     cyclesPerDay: 1,
   },
+  inverted: {
+    hands: [-12, -60, -60],
+    numberStyle: "arabic",
+    cyclesPerDay: 2,
+  },
   decimal: {
     hands: [10, 10, 10],
     numberStyle: "arabic",
@@ -61,7 +66,7 @@ function getSecondsPerTick(handIndex) {
   const SECONDS_PER_DAY = 86400;
   let product = config.cyclesPerDay;
   for (let i = 0; i <= handIndex; i++) {
-    product *= config.hands[i];
+    product *= Math.abs(config.hands[i]);
   }
   return SECONDS_PER_DAY / product;
 }
@@ -172,7 +177,7 @@ function renderHandsUI() {
       </div>
       <div class="row">
         <label>Units</label>
-        <input type="number" min="2" max="100" value="${units}" data-index="${index}">
+        <input type="number" min="-100" max="100" value="${units}" data-index="${index}">
         <span class="exchange-rate">= ${duration}/tick</span>
       </div>
     `;
@@ -194,7 +199,9 @@ function renderHandsUI() {
     } else if (el.type === "number") {
       el.addEventListener("input", (e) => {
         const index = parseInt(e.target.dataset.index, 10);
-        config.hands[index] = parseInt(e.target.value, 10) || 2;
+        const value = parseInt(e.target.value, 10);
+        // Allow negative, but not zero or NaN
+        config.hands[index] = value === 0 || isNaN(value) ? 2 : value;
         presetSelect.value = "custom";
         initSpringStates();
         updateExchangeRates();
@@ -288,47 +295,66 @@ function getDayFraction(date) {
 function getHandValue(dayFraction, handIndex) {
   // Product of units from slowest (index 0) up to this hand, times cyclesPerDay
   // Slower hands (lower index) have smaller product = fewer ticks per day
+  // Use absolute values - sign only affects rotation direction
   let product = config.cyclesPerDay;
   for (let i = 0; i <= handIndex; i++) {
-    product *= config.hands[i];
+    product *= Math.abs(config.hands[i]);
   }
   const totalUnits = dayFraction * product;
-  return totalUnits % config.hands[handIndex];
+  return totalUnits % Math.abs(config.hands[handIndex]);
 }
 
 // === Number Formatting ===
-const ROMAN_NUMERALS = [
-  "",
-  "I",
-  "II",
-  "III",
-  "IV",
-  "V",
-  "VI",
-  "VII",
-  "VIII",
-  "IX",
-  "X",
-  "XI",
-  "XII",
-  "XIII",
-  "XIV",
-  "XV",
-  "XVI",
-  "XVII",
-  "XVIII",
-  "XIX",
-  "XX",
-  "XXI",
-  "XXII",
-  "XXIII",
-  "XXIV",
-];
+const ROMAN_BASE = {
+  1: 'I',
+  5: 'V',
+  10: 'X',
+  50: 'L',
+  100: 'C',
+  500: 'D',
+  1000: 'M',
+};
+
+function toRoman(n) {
+  if (n <= 0) return n.toString();
+
+  let result = '';
+
+  // Thousands just repeat M
+  while (n >= 1000) {
+    result += ROMAN_BASE[1000];
+    n -= 1000;
+  }
+
+  // Hundreds, tens, units
+  for (const mag of [100, 10, 1]) {
+    const digit = Math.floor(n / mag);
+    n %= mag;
+
+    if (digit === 0) continue;
+
+    const one = ROMAN_BASE[mag];
+    const five = ROMAN_BASE[mag * 5];
+    const ten = ROMAN_BASE[mag * 10];
+
+    if (digit <= 3) {
+      result += one.repeat(digit);
+    } else if (digit === 4) {
+      result += one + five;
+    } else if (digit <= 8) {
+      result += five + one.repeat(digit - 5);
+    } else {
+      result += one + ten;
+    }
+  }
+
+  return result;
+}
 
 function formatNumber(n, style) {
   if (style === "none") return "";
   if (style === "roman") {
-    return ROMAN_NUMERALS[n] || n.toString();
+    return toRoman(n);
   }
   return n.toString();
 }
@@ -464,23 +490,23 @@ function getDigitalValue(dayFraction, handIndex) {
   // Like getHandValue, but for the slowest hand, show full day range
   let product = config.cyclesPerDay;
   for (let i = 0; i <= handIndex; i++) {
-    product *= config.hands[i];
+    product *= Math.abs(config.hands[i]);
   }
   const totalUnits = dayFraction * product;
 
   // For the slowest hand with multiple cycles, show full range (e.g., 0-23 not 0-11)
   if (handIndex === 0 && config.cyclesPerDay > 1) {
-    return totalUnits % (config.hands[handIndex] * config.cyclesPerDay);
+    return totalUnits % (Math.abs(config.hands[handIndex]) * config.cyclesPerDay);
   }
-  return totalUnits % config.hands[handIndex];
+  return totalUnits % Math.abs(config.hands[handIndex]);
 }
 
 function getDigitalMaxUnits(handIndex) {
   // Get the max value for digit padding
   if (handIndex === 0 && config.cyclesPerDay > 1) {
-    return config.hands[handIndex] * config.cyclesPerDay;
+    return Math.abs(config.hands[handIndex]) * config.cyclesPerDay;
   }
-  return config.hands[handIndex];
+  return Math.abs(config.hands[handIndex]);
 }
 
 function drawDigitalClock(ctx, centerX, bottomY, dayFraction, digitSize) {
@@ -555,7 +581,7 @@ function draw(currentTime) {
   // Draw tick marks: fastest first (smallest ticks), slowest last (largest, on top)
   ctx.strokeStyle = "black";
   for (let handIndex = config.hands.length - 1; handIndex >= 0; handIndex--) {
-    const units = config.hands[handIndex];
+    const units = Math.abs(config.hands[handIndex]);
     // t=0 for fastest (smallest ticks), t=1 for slowest (largest ticks)
     const t =
       config.hands.length > 1
@@ -581,7 +607,8 @@ function draw(currentTime) {
   }
 
   // Draw numbers at the slowest hand's tick positions (index 0)
-  const numberCount = config.hands[0];
+  const numberCount = Math.abs(config.hands[0]);
+  const numberDirection = config.hands[0] >= 0 ? 1 : -1;
   if (config.numberStyle !== "none") {
     ctx.fillStyle = "black";
     const fontFamily = config.numberStyle === "roman" ? "serif" : "sans-serif";
@@ -590,7 +617,7 @@ function draw(currentTime) {
     ctx.textBaseline = "middle";
 
     for (let i = 0; i < numberCount; i++) {
-      const angle = (i / numberCount) * Math.PI * 2 - Math.PI / 2;
+      const angle = numberDirection * (i / numberCount) * Math.PI * 2 - Math.PI / 2;
       const textRadius = radius * 0.8;
       const displayNum =
         i === 0 && config.numberStyle === "roman" ? numberCount : i;
@@ -611,6 +638,8 @@ function draw(currentTime) {
   const total = config.hands.length;
   for (let i = 0; i < total; i++) {
     const units = config.hands[i];
+    const absUnits = Math.abs(units);
+    const direction = units >= 0 ? 1 : -1; // Negative units rotate counter-clockwise
     const rawValue = getHandValue(dayFraction, i);
     const useSpring = getHandSpring(i);
     let displayValue;
@@ -622,8 +651,8 @@ function draw(currentTime) {
 
       if (currentUnit !== state.lastUnit) {
         // Handle wrap-around
-        if (state.lastUnit === units - 1 && currentUnit === 0) {
-          state.position -= units;
+        if (state.lastUnit === absUnits - 1 && currentUnit === 0) {
+          state.position -= absUnits;
         }
         state.velocity += SPRING_ACCELERATION;
         state.lastUnit = currentUnit;
@@ -642,7 +671,7 @@ function draw(currentTime) {
       displayValue = rawValue;
     }
 
-    const angle = (displayValue / units) * Math.PI * 2 - Math.PI / 2;
+    const angle = direction * (displayValue / absUnits) * Math.PI * 2 - Math.PI / 2;
 
     ctx.beginPath();
     ctx.strokeStyle = getHandColor(i, total);
