@@ -1,0 +1,33 @@
+.canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  height: 100svh;
+}
+
+.toggleButton {
+  position: fixed;
+  top: 12px;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  border: none;
+  background: rgba(255, 255, 255, 0.9);
+  cursor: pointer;
+  font-size: 18px;
+  z-index: 101;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  transition:
+    left 0.3s ease,
+    transform 0.2s;
+}
+
+.toggleButton[data-panel-open="true"] {
+  left: 372px;
+}
+
+.toggleButton[data-panel-open="false"] {
+  left: 12px;
+}

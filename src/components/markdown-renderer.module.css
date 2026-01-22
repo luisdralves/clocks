@@ -1,0 +1,25 @@
+.markdown {
+  line-height: 1.6;
+  color: #333;
+}
+
+@media (min-width: 769px) {
+  .markdown h1:first-of-type {
+    max-width: calc(100% - 208px);
+  }
+}
+
+@media (max-width: 768px) {
+  .markdown {
+    padding: 0 1rem 1rem;
+  }
+}
+
+.markdown blockquote {
+  font-size: 0.9em;
+  font-style: italic;
+  color: #666;
+  margin: 1rem 0;
+  padding-left: 1rem;
+  border-left: 3px solid #ddd;
+}

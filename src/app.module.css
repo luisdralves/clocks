@@ -1,0 +1,135 @@
+.container {
+  height: 100vh;
+  height: 100svh;
+  overflow-y: auto;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+.header {
+  padding: 3rem 2rem 2rem;
+  text-align: center;
+  color: #fff;
+}
+
+.title {
+  margin: 0;
+  font-size: 2.5rem;
+  font-weight: 700;
+}
+
+.main {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 2rem 2rem;
+  gap: 2rem;
+  align-items: start;
+}
+
+.clockGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+  align-content: start;
+}
+
+.sidebar {
+  position: relative;
+}
+
+.sidebar:has(> *) {
+  background: #fff;
+  border-radius: 12px;
+  padding: 0 1.5rem 1.5rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+.sidebarHeader {
+  position: absolute;
+  top: 1.5rem;
+  right: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.launchButton {
+  display: inline-block;
+  padding: 0.75rem 1.5rem;
+  background: #2196f3;
+  color: #fff;
+  text-decoration: none;
+  border-radius: 8px;
+  font-weight: 500;
+}
+
+.closeButton {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #666;
+}
+
+@media (max-width: 1280px) {
+  .main {
+    grid-template-columns: 1fr 2fr;
+  }
+}
+
+/* Mobile styles */
+@media (max-width: 768px) {
+  .container[data-sidebar-open="true"] {
+    overflow: hidden;
+  }
+
+  .header {
+    padding: 2rem 1rem 1rem;
+  }
+
+  .title {
+    font-size: 1.75rem;
+  }
+
+  .main {
+    grid-template-columns: 1fr;
+    padding: 0 1rem 1rem;
+    gap: 1rem;
+  }
+
+  .clockGrid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  }
+
+  .sidebar {
+    display: none;
+  }
+
+  .sidebar:has(> *) {
+    display: flex;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    max-height: none;
+    border-radius: 0;
+    z-index: 1000;
+    padding: 0;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+
+  .sidebarHeader {
+    position: sticky;
+    top: 0;
+    background: #fff;
+    padding: 1rem;
+    margin-bottom: 0;
+    justify-content: space-between;
+    z-index: 1;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+}

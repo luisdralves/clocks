@@ -1,0 +1,38 @@
+.canvas {
+  flex: 1;
+  width: 100vw;
+}
+
+.info {
+  position: absolute;
+  top: 1.5rem;
+  left: 1.5rem;
+  z-index: 1;
+  transition: color 0.5s ease;
+}
+
+.info[data-light="true"] {
+  color: rgba(0, 0, 0, 0.8);
+}
+
+.info[data-light="false"] {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.poem {
+  font-family: Georgia, serif;
+  font-style: italic;
+  font-size: 1.1rem;
+  line-height: 1.7;
+}
+
+.indented {
+  margin-left: 1.5rem;
+}
+
+.details {
+  margin-top: 1rem;
+  font-family: system-ui, sans-serif;
+  font-size: 0.95rem;
+  line-height: 1.6;
+}

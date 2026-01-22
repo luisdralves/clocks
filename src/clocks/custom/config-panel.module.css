@@ -1,0 +1,146 @@
+.panel {
+  position: fixed;
+  top: 0;
+  left: 0;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 0 0 12px 0;
+  box-shadow: 0 2px 20px rgba(0, 0, 0, 0.3);
+  width: 360px;
+  max-height: 90vh;
+  overflow-y: auto;
+  transition:
+    transform 0.3s ease,
+    opacity 0.3s ease;
+  z-index: 100;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+.panel[data-open="true"] {
+  transform: translateX(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.panel[data-open="false"] {
+  transform: translateX(-100%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.header {
+  padding: 16px;
+  border-bottom: 1px solid #e0e0e0;
+  font-weight: 600;
+  font-size: 18px;
+}
+
+.section {
+  padding: 16px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.sectionNoBorder {
+  padding: 16px;
+}
+
+.row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.rowLast {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.label {
+  font-size: 13px;
+  color: #555;
+  min-width: 60px;
+}
+
+.select {
+  flex: 1;
+  padding: 6px 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.input {
+  flex: 1;
+  padding: 6px 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.handsTitle {
+  font-weight: 500;
+  margin-bottom: 12px;
+}
+
+.handsList {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.handItem {
+  background: #f5f5f5;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.handHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  font-weight: 500;
+  font-size: 13px;
+  color: #333;
+}
+
+.removeButton {
+  background: #ff4444;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.handRow {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.unitsLabel {
+  font-size: 13px;
+  color: #555;
+  min-width: 40px;
+}
+
+.duration {
+  font-size: 12px;
+  color: #888;
+  white-space: nowrap;
+}
+
+.addButton {
+  width: 100%;
+  padding: 10px;
+  background: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  margin-top: 12px;
+}

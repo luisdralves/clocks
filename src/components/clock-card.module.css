@@ -1,0 +1,29 @@
+.card {
+  appearance: none;
+  display: flex;
+  flex-direction: column;
+  align-content: start;
+  padding: 1.5rem;
+  background: #fff;
+  border: 2px solid #e0e0e0;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.card[data-selected="true"] {
+  background: #e3f2fd;
+  border: 2px solid #2196f3;
+}
+
+.name {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.description {
+  margin: 0.5rem 0 0;
+  font-size: 0.85rem;
+  color: #666;
+}
