@@ -31,7 +31,7 @@ export const PRESETS: Record<PresetName, ClockConfig> = {
     cyclesPerDay: 2,
   },
   decimal: {
-    hands: [10, 10, 10],
+    hands: [10, 100, 100],
     numberStyle: 'arabic',
     cyclesPerDay: 1,
   },

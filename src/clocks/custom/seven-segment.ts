@@ -181,7 +181,7 @@ export function drawDigitalClock(params: DigitalClockParams): void {
   let totalWidth = 0;
   for (let i = 0; i < hands.length; i++) {
     const maxUnits = getDigitalMaxUnits(i, hands, cyclesPerDay);
-    const digitCount = maxUnits.toString().length;
+    const digitCount = (maxUnits - 1).toString().length;
     totalWidth += digitCount * (digitWidth + spacing);
     if (i < hands.length - 1) {
       totalWidth += colonWidth + spacing;
@@ -194,7 +194,7 @@ export function drawDigitalClock(params: DigitalClockParams): void {
   for (let i = 0; i < hands.length; i++) {
     const value = Math.floor(getDigitalValue(dayFraction, i, hands, cyclesPerDay));
     const maxUnits = getDigitalMaxUnits(i, hands, cyclesPerDay);
-    const digitCount = maxUnits.toString().length;
+    const digitCount = (maxUnits - 1).toString().length;
     const valueStr = value.toString().padStart(digitCount, '0');
 
     for (const char of valueStr) {

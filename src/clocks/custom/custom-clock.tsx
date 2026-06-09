@@ -131,7 +131,7 @@ export function CustomClock() {
         displayValue = rawValue;
       }
 
-      const angle = direction * valueToAngle(displayValue, absUnits, 0);
+      const angle = direction * valueToAngle(displayValue, absUnits, 0) - Math.PI / 2;
 
       context.beginPath();
       context.strokeStyle = getHandColor(i, total);
