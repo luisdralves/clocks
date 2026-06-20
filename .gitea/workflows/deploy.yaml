@@ -12,6 +12,9 @@ jobs:
       volumes:
         - /var/www/clocks:/deploy
     steps:
+      - name: Install git and node
+        run: apt-get update && apt-get install -y --no-install-recommends git ca-certificates nodejs
+
       - uses: actions/checkout@v4
 
       - name: Install dependencies
