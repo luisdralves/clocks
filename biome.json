@@ -35,6 +35,7 @@
         "src/app.tsx",
         "src/main.tsx",
         "src/components/**/*",
+        "src/clocks/crowd/**/*",
         "src/clocks/custom/**/*",
         "src/clocks/daylight/**/*"
       ],
