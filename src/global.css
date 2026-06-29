@@ -1,9 +1,30 @@
-body {
-  margin: 0;
-  overflow: hidden;
+:root {
+  --paper: #f3efe6;
+  --paper-plate: #0a0a0a;
+  --ink: #1c1b18;
+  --ink-soft: #57534a;
+  --accent: #b23a2e;
+  --accent-strong: #8f2b21;
+  --rule: rgba(28, 27, 24, 0.16);
+
+  --font-serif: ui-serif, Georgia, "Iowan Old Style", "Times New Roman", serif;
+  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
 }
 
 * {
   box-sizing: border-box;
-  font-family: system-ui, monospace;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  overflow: hidden;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-serif);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }

@@ -1,97 +1,70 @@
-import { useEffect, useState } from 'react';
 import styles from './app.module.css';
-import { ClockCard } from './components/clock-card';
-import { MarkdownRenderer } from './components/markdown-renderer';
+import { ClockEntry, type ClockInfo } from './components/clock-entry';
+import { LiveTime } from './components/live-time';
+
+// Per-clock preview tuning, in curated reading order. `aspect` is the frame
+// shape; `innerWidth`, when set, renders the iframe as if its viewport were that
+// many pixels wide (then scales it to fit), so clocks that branch on viewport
+// size keep their desktop layout.
+const CLOCK_META: { id: string; aspect: string; innerWidth?: number }[] = [
+  { id: 'simple', aspect: '16 / 9' },
+  { id: 'wall-o-clocks', aspect: '21 / 9' },
+  { id: 'precalculated-grid', aspect: '16 / 9' },
+  { id: 'lemniscate', aspect: '2 / 1' },
+  { id: 'spiral', aspect: '16 / 9' },
+  { id: 'custom', aspect: '4 / 3' },
+  { id: 'daylight', aspect: '16 / 9', innerWidth: 1280 },
+  { id: 'crowd', aspect: '16 / 9' },
+];
+
+const DEFAULT_ASPECT = '16 / 9';
+const META = new Map(CLOCK_META.map((meta, order) => [meta.id, { ...meta, order }]));
+
+function parseClock(path: string, content: string): ClockInfo | null {
+  const id = path.match(/\.\/clocks\/(.+)\/README\.md/)?.[1];
+  const name = content.match(/^#\s+(.+)$/m)?.[1];
+
+  if (!id || !name) {
+    return null;
+  }
+
+  const tagline = content.match(/^>\s*(.+)$/m)?.[1];
+  const body = content
+    .replace(/^#\s+.+$/m, '')
+    .replace(/^>\s*.+$/m, '')
+    .trim();
+
+  return {
+    id,
+    name,
+    tagline,
+    body,
+    path: `/${id}/`,
+    aspect: META.get(id)?.aspect ?? DEFAULT_ASPECT,
+    innerWidth: META.get(id)?.innerWidth,
+  };
+}
 
 const CLOCKS = Object.entries(import.meta.glob('./clocks/*/README.md', { as: 'raw', eager: true }))
-  .map(([path, content]) => {
-    const id = path.match(/\.\/clocks\/(.+)\/README\.md/)?.[1];
-    const name = content.match(/^#\s+(.+)$/m)?.[1];
-    const description = content.match(/^>\s*(.+)$/m)?.[1];
-
-    if (!id || !name) {
-      return null;
-    }
-
-    return {
-      id,
-      name,
-      description,
-      content,
-      path: `/${id}/`,
-    };
-  })
-  .filter((clock) => !!clock);
+  .map(([path, content]) => parseClock(path, content))
+  .filter((clock): clock is ClockInfo => !!clock)
+  .sort(
+    (a, b) =>
+      (META.get(a.id)?.order ?? CLOCK_META.length) - (META.get(b.id)?.order ?? CLOCK_META.length),
+  );
 
 export function App() {
-  const [selectedClock, setSelectedClock] = useState<string | null>(() => {
-    const hash = window.location.hash.slice(1);
-    return CLOCKS.some((c) => c.id === hash) ? hash : null;
-  });
-
-  const selectedClockInfo = CLOCKS.find((c) => c.id === selectedClock);
-
-  useEffect(() => {
-    if (selectedClock) {
-      window.history.replaceState(null, '', `#${selectedClock}`);
-    } else {
-      window.history.replaceState(null, '', window.location.pathname);
-    }
-  }, [selectedClock]);
-
-  useEffect(() => {
-    const handleHashChange = () => {
-      const hash = window.location.hash.slice(1);
-      if (hash && CLOCKS.some((c) => c.id === hash)) {
-        setSelectedClock(hash);
-      } else {
-        setSelectedClock(null);
-      }
-    };
-
-    window.addEventListener('hashchange', handleHashChange);
-    return () => window.removeEventListener('hashchange', handleHashChange);
-  }, []);
-
   return (
-    <div className={styles.container} data-sidebar-open={!!selectedClock}>
-      <header className={styles.header}>
-        <h1 className={styles.title}>Clocks</h1>
+    <div className={styles.page}>
+      <header className={styles.masthead}>
+        <h1 className={styles.wordmark}>Clocks</h1>
+        <LiveTime className={styles.readout} />
       </header>
 
-      <main className={styles.main}>
-        <section className={styles.clockGrid}>
-          {CLOCKS.map((clock) => (
-            <ClockCard
-              key={clock.id}
-              clock={clock}
-              isSelected={selectedClock === clock.id}
-              onSelect={() => setSelectedClock(selectedClock === clock.id ? null : clock.id)}
-            />
-          ))}
-        </section>
-
-        <aside className={styles.sidebar}>
-          {selectedClock && selectedClockInfo && (
-            <>
-              <div className={styles.sidebarHeader}>
-                <a href={selectedClockInfo.path} className={styles.launchButton}>
-                  Launch Clock →
-                </a>
-
-                <button
-                  onClick={() => setSelectedClock(null)}
-                  className={styles.closeButton}
-                  type="button"
-                >
-                  ×
-                </button>
-              </div>
-
-              <MarkdownRenderer content={selectedClockInfo.content} />
-            </>
-          )}
-        </aside>
+      <main className={styles.entries}>
+        {CLOCKS.map((clock) => (
+          <ClockEntry key={clock.id} clock={clock} />
+        ))}
       </main>
     </div>
   );
